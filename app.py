@@ -3,7 +3,7 @@ import streamlit as st
 from src.api import fetch_btc_transactions
 from src.graph_builder import build_graph
 from src.whale_detector import detect_whales
-from src.community_detector import detect_communities
+from src.community_detector import detect_communities, detect_whale_pods
 from src.ml_cluster import create_features, cluster
 from src.visualize import draw_graph
 from src.centrality import compute_centrality
@@ -14,7 +14,7 @@ st.title("🐋 Bitcoin Whale Pod Detection Dashboard")
 
 # ---------------- SIDEBAR ----------------
 limit_blocks = st.sidebar.slider("Blocks to Fetch", 1, 10, 3)
-whale_threshold = st.sidebar.number_input("Whale Threshold (BTC)", 5.0)
+whale_threshold = st.sidebar.number_input("Whale Threshold (BTC)", 2.0)
 
 # ---------------- RUN ----------------
 if st.button("Run Analysis"):
@@ -52,12 +52,9 @@ if st.button("Run Analysis"):
     centrality_df = compute_centrality(G)
 
     if not centrality_df.empty:
-
         top = centrality_df.sort_values("pagerank", ascending=False).head(10)
-
         st.write("🔥 Top 10 Important Wallets (PageRank)")
         st.dataframe(top)
-
     else:
         st.warning("No centrality data available")
 
@@ -73,13 +70,29 @@ if st.button("Run Analysis"):
     st.subheader("🐋 Whale Wallets")
 
     whales = detect_whales(G, whale_threshold)
-    st.write(whales)
 
-    # ---------------- COMMUNITIES ----------------
+    if whales:
+        st.write(f"Found **{len(whales)}** whale wallet(s) above {whale_threshold} BTC threshold:")
+        st.dataframe(
+            {"Wallet": [w[0] for w in whales], "Total BTC Sent": [w[1] for w in whales]}
+        )
+    else:
+        st.info("No whale wallets found at this threshold. Try lowering it in the sidebar.")
+
+    # ---------------- COMMUNITIES + WHALE PODS ----------------
     st.subheader("🌊 Whale Pods")
 
-    communities = detect_communities(G)
-    st.write(communities)
+    partition = detect_communities(G)
+    pods = detect_whale_pods(G, partition, whale_threshold)
+
+    if pods:
+        st.write(f"Found **{len(pods)}** whale pod(s) — communities containing 2 or more whale wallets:")
+        for pod in pods:
+            with st.expander(f"Pod {pod['pod_id']} — {pod['whale_count']} whales — {pod['total_wallets_in_community']} total wallets in community"):
+                for w in pod["whales"]:
+                    st.write(f"🐋 `{w['wallet']}` — {w['total_btc_sent']} BTC sent")
+    else:
+        st.info("No whale pods found. This means whale wallets are each in different communities — no coordination detected. Try lowering the threshold to find more whales.")
 
     # ---------------- ML CLUSTERING ----------------
     st.subheader("🤖 ML Clusters")
