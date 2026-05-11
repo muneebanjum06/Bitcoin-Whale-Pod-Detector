@@ -4,7 +4,7 @@ from src.api import fetch_btc_transactions
 from src.graph_builder import build_graph
 from src.whale_detector import detect_whales
 from src.community_detector import detect_communities, detect_whale_pods
-from src.ml_cluster import create_features, cluster
+from src.ml_cluster import create_features
 from src.visualize import draw_graph
 from src.centrality import compute_centrality
 
@@ -14,7 +14,7 @@ st.title("🐋 Bitcoin Whale Pod Detection Dashboard")
 
 # ---------------- SIDEBAR ----------------
 limit_blocks = st.sidebar.slider("Blocks to Fetch", 1, 10, 3)
-whale_threshold = st.sidebar.number_input("Whale Threshold (BTC)", 2.0)
+whale_threshold = st.sidebar.number_input("Whale Threshold (BTC)", 5.0)
 
 # ---------------- RUN ----------------
 if st.button("Run Analysis"):
@@ -95,7 +95,11 @@ if st.button("Run Analysis"):
         st.info("No whale pods found. This means whale wallets are each in different communities — no coordination detected. Try lowering the threshold to find more whales.")
 
     # ---------------- ML CLUSTERING ----------------
-    st.subheader("🤖 ML Clusters")
+    st.subheader("📋 Wallet Feature Table")
 
     df = create_features(G)
-    st.write(cluster(df))
+    if not df.empty:
+        st.write(f"Feature table for all {len(df)} wallets:")
+        st.dataframe(df)
+    else:
+        st.warning("No wallet features available.")
