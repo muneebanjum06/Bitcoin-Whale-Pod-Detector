@@ -14,7 +14,7 @@ st.title("🐋 Bitcoin Whale Pod Detection Dashboard")
 
 # ---------------- SIDEBAR ----------------
 limit_blocks = st.sidebar.slider("Blocks to Fetch", 1, 10, 3)
-whale_threshold = st.sidebar.number_input("Whale Threshold (BTC)", 5.0)
+whale_threshold = st.sidebar.number_input("Whale Threshold (BTC)", 2.0)
 
 # ---------------- RUN ----------------
 if st.button("Run Analysis"):
